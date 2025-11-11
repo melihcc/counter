@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Counter dApp</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9fafb;
+      display: flex;
+      justify-content: center;
+      margin-top: 40px;
+    }
+    .container {
+      width: 500px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.05);
+    }
+    h2 {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    button {
+      margin: 5px;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .primary {
+      background-color: #2563eb;
+      color: white;
+    }
+    .disabled {
+      background-color: #ccc;
+      color: #666;
+      cursor: not-allowed;
+    }
+    .info-box {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .label {
+      font-weight: bold;
+    }
+    #progress {
+      height: 20px;
+      width: 100%;
+      background: #111827;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Counter dApp</h2>
+
+    <button id="connectButton" class="primary" onclick="connectMetamask()">MetaMask'e Bağlan</button>
+    <button id="readBtn" class="disabled" disabled>Değeri Oku</button>
+    <button id="incBtn" class="disabled" disabled>Artır</button>
+    <button id="decBtn" class="disabled" disabled>Azalt</button>
+
+    <div class="info-box">
+      <p><span class="label">Hesap:</span> <span id="account">—</span></p>
+      <p><span class="label">Ağ:</span> <span id="network">—</span></p>
+      <p><span class="label">Kontrat:</span> <span id="contractAddr">—</span></p>
+    </div>
+
+    <div class="info-box">
+      <p><span class="label">Güncel Değer:</span> <span id="counter">—</span></p>
+    </div>
+
+    <h3>Günlük</h3>
+    <div id="progress"></div>
+  </div>
+
+  <script>
+    const contractAddress = "0x8A10ed351e35c606b875A5e5D3E5d257dAaC4d30";  // örn: "0x12ab34..."
+    const abi = [
+      {"inputs": [], "stateMutability": "nonpayable", "type": "constructor"},
+      {"inputs": [], "name": "counter", "outputs": [{"internalType": "uint256","name":"","type":"uint256"}], "stateMutability":"view","type":"function"},
+      {"inputs": [], "name": "increment", "outputs": [], "stateMutability": "nonpayable", "type": "function"},
+      {"inputs": [], "name": "decrement", "outputs": [], "stateMutability": "nonpayable", "type": "function"},
+      {"inputs": [], "name": "getCounter", "outputs": [{"internalType":"uint256","name":"","type":"uint256"}], "stateMutability":"view","type":"function"}
+    ];
+
+    let web3, contract, account;
+
+    async function connectMetamask() {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        try {
+          await window.ethereum.request({ method: "eth_requestAccounts" });
+          const accounts = await web3.eth.getAccounts();
+          account = accounts[0];
+          document.getElementById("account").innerText = account;
+
+          const networkId = await web3.eth.net.getId();
+          if (networkId !== 11155111) {
+            alert("⚠️ Lütfen MetaMask'ta Sepolia ağına geçin!");
+            document.getElementById("network").innerText = "Yanlış Ağ!";
+            return;
+          }
+          document.getElementById("network").innerText = "Sepolia Testnet";
+
+          contract = new web3.eth.Contract(abi, contractAddress);
+          document.getElementById("contractAddr").innerText = contractAddress;
+
+          document.getElementById("readBtn").disabled = false;
+          document.getElementById("incBtn").disabled = false;
+          document.getElementById("decBtn").disabled = false;
+          document.getElementById("readBtn").classList.remove("disabled");
+          document.getElementById("incBtn").classList.remove("disabled");
+          document.getElementById("decBtn").classList.remove("disabled");
+
+          updateCounter();
+        } catch (err) {
+          console.error(err);
+          alert("Bağlantı reddedildi veya hata oluştu!");
+        }
+      } else {
+        alert("MetaMask yüklü değil. Lütfen yükleyin!");
+      }
+    }
+
+    async function updateCounter() {
+      const value = await contract.methods.getCounter().call();
+      document.getElementById("counter").innerText = value;
+    }
+
+    async function increment() {
+      await contract.methods.increment().send({ from: account });
+      updateCounter();
+    }
+
+    async function decrement() {
+      await contract.methods.decrement().send({ from: account });
+      updateCounter();
+    }
+
+    document.getElementById("readBtn").onclick = updateCounter;
+    document.getElementById("incBtn").onclick = increment;
+    document.getElementById("decBtn").onclick = decrement;
+  </script>
+</body>
+</html>
